@@ -14,7 +14,7 @@ try{
   const page=await context.newPage(),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push({url:r.url(),type:r.resourceType()}));
   await page.clock.install();await page.goto(url);await page.locator('#population-total').filter({hasText:'10 neighbours'}).waitFor();await page.clock.pauseAt(await page.evaluate(()=>Date.now()+1000));await page.clock.runFor(300);
   const save=async()=>{await page.locator('#save').click();return page.evaluate(k=>JSON.parse(localStorage.getItem(k)).world,KEY);};
-  await run(`${mobile?'mobile':'desktop'} render and layout`,async()=>{assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.ok(await page.locator('#world').isVisible());await page.screenshot({path:`${output}/${mobile?'mobile':'desktop'}.png`,fullPage:true});});
+  await run(`${mobile?'mobile':'desktop'} render and layout`,async()=>{assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.ok(await page.locator('#world').isVisible());assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');assert.equal(await page.evaluate(()=>getComputedStyle(document.body).color),'rgb(230, 236, 231)');assert.equal(await page.locator('.local-badge a').getAttribute('href'),'https://jinx.xanderxx.xyz/');await page.screenshot({path:`${output}/${mobile?'mobile':'desktop'}.png`,fullPage:true});});
   await page.locator('#pause').click();
   await run('paused world does not advance',async()=>{const a=await save();await page.clock.runFor(2000);assert.equal((await save()).time,a.time);});
   await run(`${mobile?'touch':'pointer drag'} painting and inspection`,async()=>{
