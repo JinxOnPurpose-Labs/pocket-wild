@@ -1,0 +1,9 @@
+{
+  "name": "pocket-wild",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A tiny, local-save browser ecosystem sandbox.",
+  "scripts": {"test": "node --test", "start": "node scripts/serve.js"},
+  "engines": {"node": ">=22"}
+}
