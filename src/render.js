@@ -26,5 +26,5 @@ export function render(ctx,w,view={}){
  if(w.weather==='rain'){ctx.strokeStyle='#d4e7e96b';ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<70;i++){const x=(i*137.3+w.time*90)%(WIDTH*TILE),y=(i*71.7+w.time*170)%(HEIGHT*TILE);ctx.moveTo(x,y);ctx.lineTo(x-3,y+7);}ctx.stroke();}
  // Soft warm edge of the sun, not a physics model.
  if(sun>.3&&w.weather==='clear'){const light=ctx.createLinearGradient(0,0,WIDTH*TILE,HEIGHT*TILE);light.addColorStop(0,'#fff2b81a');light.addColorStop(.6,'#fff2b800');ctx.fillStyle=light;ctx.fillRect(0,0,WIDTH*TILE,HEIGHT*TILE);}
- if(view.cursor){const{x,y}=view.cursor;ctx.strokeStyle=view.tool==='erase'?'#f7bb9c':'#f7f2d6';ctx.lineWidth=1;ctx.strokeRect(Math.floor(x)*TILE+.5,Math.floor(y)*TILE+.5,TILE-1,TILE-1);ctx.fillStyle='#ffffff12';ctx.fillRect(Math.floor(x)*TILE,Math.floor(y)*TILE,TILE,TILE);}
+ if(view.cursor){const{x,y}=view.cursor;ctx.strokeStyle=view.tool==='erase'?'#f7bb9c':'#f7f2d6';ctx.lineWidth=1;const r=['bug','snail','frog','inspect'].includes(view.tool)?0:((view.brush||1)-1)/2;for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++)if(xx*xx+yy*yy<=r*r){const px=(Math.floor(x)+xx)*TILE,py=(Math.floor(y)+yy)*TILE;ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1);ctx.fillStyle='#ffffff12';ctx.fillRect(px,py,TILE,TILE);}}
 }
