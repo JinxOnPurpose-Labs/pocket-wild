@@ -1,6 +1,6 @@
 # Pocket Wild
 
-A tiny living meadow, a pond, and several unreasonable frogs. A first playable **0.1.1** browser ecosystem sandbox, not a scientific ecology model.
+A tiny living meadow, a pond, and several unreasonable frogs. A terrarium edition **0.2.0** browser ecosystem sandbox, not a scientific ecology model.
 
 **Play:** https://jinx.xanderxx.xyz/pocket-wild/
 
@@ -13,13 +13,18 @@ A tiny living meadow, a pond, and several unreasonable frogs. A first playable *
 - Pause to build without advancing time. Choose 1×, 2× or 4× speed and automatic, clear, cloudy or rainy weather.
 - A game day takes three minutes at 1×. Plants grow/spread, creatures feed, reproduce and die. Caps: 60 bugs, 18 snails, 12 frogs. There is no win condition or guaranteed ecological balance.
 - **Keyboard:** Tab to controls/canvas. Keys 1–9 select the listed tools; I selects Inspect; P pauses/resumes. With canvas focused, arrow keys move a tile cursor; Space/Enter applies the tool. Buttons also work with normal keyboard activation.
-- New pond starts over with neighbours; Start empty clears the world. Both ask first.
+- Shape land/islands and sand shores, then add original pixel rocks/logs. Rocks block walking creatures; bugs fly over. Decor occupies its plant tile; remove it before planting. Pond/meadow tools clear decor. Logs need dry ground or shallows.
+- Brush sizes are 1/3/5 tiles (disk footprint). Creatures always add one at a time. Pause before using Undo/Redo (Z/Y on the focused canvas): one pointer stroke or keyboard application is one transaction, with up to 12 entries. A cancelled paused touch stroke rolls back; while running edits stay live. Resume/load/new world clears history. History is session-only, not time travel through a running ecosystem.
+- Pick Meadow pond, Little islands, Rainy marsh or Empty ground, then **New preset**; Start empty is a shortcut. Both confirm before replacing active changes.
+- **Starting-seed link** reveals a copyable `#pw1:preset:seed` fragment for the INITIAL generated world only, not edits, time or current creatures. Copy it manually. It never uploads a world or puts it in query parameters. Shared links offer an explicit Open/Keep choice without replacing the active world on arrival. Invalid/oversized fragments are ignored. Legacy saves without a known generator origin cannot pretend to reproduce their initial state.
 
 ## Saves and privacy
 
 Worlds autosave roughly every ten seconds, on hiding/leaving the page, or with **Save world**. Saves stay in this browser's localStorage (`pocket-wild:world:v1`). There is no offline catch-up. Hidden tabs stop simulation and discard pending elapsed time when returning; a stalled visible frame contributes at most 0.25 seconds before speed scaling.
 
-Malformed/oversized saves open a starter meadow **without overwriting the old save automatically**. Explicit Save asks to replace it. Blocked/full storage gives a warning and allows unsaved play. New-world actions replace the existing save after confirmation. Browser cleanup, private browsing, a different device/origin or storage eviction can lose a world. There is no export/import or cloud backup in v0.1.
+Malformed/oversized saves open a starter meadow **without overwriting the old save automatically**. Explicit Save asks to replace it. Blocked/full storage gives a warning and allows unsaved play. New-world actions replace the existing save after confirmation. Browser cleanup, private browsing, a different device/origin or storage eviction can lose a world. Three browser-local named snapshot slots are available. Save slot writes only the selected snapshot; it does not clear dirty active changes, replace primary autosave or update other slots. Load always confirms active unsaved changes may be lost; overwrite confirms replacing the chosen slot. Names are literal and limited to 32 characters. Slots do not auto-update. Corrupt slot data is held, not silently reset; active play remains available. All slots/storage are bounded (3 snapshots, 500,000 characters per world, 1,500,000 characters for the slots envelope). Browser quota failures show an honest warning and retain unsaved playable state.
+
+Existing v1 saves migrate in memory by defaulting missing terrain/decor fields; time, RNG, creatures and old cell values are retained, with no catch-up. New fields remain optional on input. Corrupt primary-save recovery hold survives new worlds, slot loads and seed opening: only explicit **Save world** plus confirmation can replace unreadable primary data. Slot snapshots may be saved separately while that hold remains. No full-world export/import or cloud backup is provided.
 
 No accounts, cookies set by the game, analytics, dependencies, external fonts, paid APIs or gameplay network requests. Initial HTML/CSS/JS/icon downloads still require the static host. Cloudflare serves the primary site; GitHub Pages remains an alternate address. Both providers have their own hosting policies. Canvas art is original procedural pixel art, drawn in `src/render.js`; all game logic runs locally. The external source link opens GitHub only when followed.
 
@@ -42,14 +47,15 @@ PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs \
 CHROMIUM_PATH=/absolute/path/to/chrome \
 EVIDENCE_DIR=/tmp/pocket-wild-check \
 node scripts/browser-check.mjs
-# DEMO_URL=https://jinxonpurpose-labs.github.io/pocket-wild/ to check public hosting
+# DEMO_URL=https://jinx.xanderxx.xyz/pocket-wild/ to check the current public game
+# With the same environment, node scripts/terrarium-check.mjs adds expansion regressions
 ```
 
 The browser checker launches isolated synthetic worlds, changes their local storage, and writes desktop/mobile screenshots plus results. It checks pointer/touch, keyboard, pause/speed/weather, save reload, corrupt/blocked storage, reset, layout, console errors and network requests. Its background regression drives the actual visibility handler with controlled `document.hidden` and a virtual clock; it is not a physical OS/device suspension test. Mobile checks are Chromium touch/viewport emulation, not physical-device testing. Canvas has keyboard controls and textual inspection/census, but is not a complete screen-reader rendering of the world.
 
 ## Primary hosting and dark theme
 
-The interface is dark by default, including native form controls, keyboard focus, tools and inspection panels. The living meadow keeps its natural colours and day/night cycle; the simulation and save format are unchanged.
+The interface is dark by default, including native form controls, keyboard focus, tools and inspection panels. The living meadow keeps its natural colours and day/night cycle. Version1 save envelopes remain compatible through tested optional-field migration; new terrain/presets do not require moving old worlds.
 
 The separate [jinx-hub](https://github.com/JinxOnPurpose-Labs/jinx-hub) project pins a tested game commit and copies only its public HTML/CSS/JS/icon into `/pocket-wild/`. It does not serve this repository wholesale. Re-pinning that commit and verifying the public deployment are explicit release steps, not an automatic deploy on every game push.
 
@@ -59,4 +65,4 @@ The separate [jinx-hub](https://github.com/JinxOnPurpose-Labs/jinx-hub) project 
 
 GitHub Pages is free static hosting for this public repository. Pages source is `gh-pages` at `/`; `.nojekyll` keeps the source modules intact. Publish only the tested feature commit, with a create/fast-forward of `gh-pages`, never force-push. Inspect existing Pages settings first. Wait for the Pages build, verify served HTML/assets match the exact commit and run the UI checker against the real URL before calling a revision live. Keep branches, issues and original test evidence. Reverting deployment requires a new forward commit restoring the intended files, not rewriting branch history.
 
-Model tests cover deterministic simulation, feeding, reproduction/caps, starvation, painting, weather, validation and save round trips. This is an experimental toy with deliberately simple resource rules. No audio, monetization, offline progression, multiplayer or extra biomes.
+Model tests cover deterministic simulation, feeding, reproduction/caps, starvation, painting, weather, validation and save round trips. This is an experimental toy with deliberately simple resource rules. Preset landscapes are deliberately small variations of this ecosystem, not new progression systems. No audio, monetization, offline progression or multiplayer. This task updates only the existing primary hostname; the old GitHub Pages origin is intentionally left unchanged.

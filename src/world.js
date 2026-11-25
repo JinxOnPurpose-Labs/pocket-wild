@@ -12,9 +12,9 @@ export function spawn(w,type,x,y){
  const angle=random(w)*Math.PI*2,c={id:w.nextId++,type,x,y,energy:.65+random(w)*.12,age:0,cooldown:25+random(w)*20,dx:Math.cos(angle),dy:Math.sin(angle),turn:2+random(w)*4};w.creatures.push(c);return c;
 }
 export function createWorld(seed=12345,starter=true){
- const w={version:1,seed:seed>>>0,rng:seed>>>0,time:DAY*7/24,weather:'clear',weatherUntil:DAY*7/24+35,weatherMode:'auto',ecology:0,nextId:1,births:0,losses:0,meals:0,cells:[],creatures:[],events:[]};
+ const w={version:1,seed:seed>>>0,rng:seed>>>0,time:DAY*7/24,weather:'clear',weatherUntil:DAY*7/24+35,weatherMode:'auto',ecology:0,nextId:1,births:0,losses:0,meals:0,origin:{generator:1,seed:seed>>>0,preset:starter?'meadow':'empty'},cells:[],creatures:[],events:[]};
  for(let y=0;y<HEIGHT;y++)for(let x=0;x<WIDTH;x++){
-  const c={water:0,moisture:.4+random(w)*.15,plant:null,growth:0,food:0};
+  const c={terrain:'meadow',decor:null,water:0,moisture:.4+random(w)*.15,plant:null,growth:0,food:0};
   if(starter){
    const pond=((x-30)/7)**2+((y-15)/5)**2;if(pond<.85+random(w)*.15){c.water=clamp((1-pond)*.9+.18);c.moisture=1;}
    else if(random(w)<.34){c.plant='grass';c.growth=.4+random(w)*.6;c.food=.7;}
@@ -26,22 +26,24 @@ export function createWorld(seed=12345,starter=true){
  if(starter){for(const[x,y]of[[12,12],[16,10],[22,17],[26,19],[29,14],[9,15]])spawn(w,'bug',x+.5,y+.5);spawn(w,'snail',10.5,17.5);spawn(w,'snail',23.5,9.5);spawn(w,'frog',27.5,16.5);spawn(w,'frog',32.5,13.5);}
  note(w,starter?'A pond, a few plants, and several questionable life choices.':'Fresh ground. Try a pond, some flowers, then a few bugs.');return w;
 }
-export function applyTool(w,tool,x,y){
+export function applyTool(w,tool,x,y,single=false){
  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=WIDTH||y>=HEIGHT)return{ok:false,message:'Choose a spot inside the meadow.'};
  const gx=Math.floor(x),gy=Math.floor(y),c=cellAt(w,gx,gy);
+ if(['rock','log','land','sand'].includes(tool)){if(['rock','log'].includes(tool)){if(c.water>.25)return{ok:false,message:'Decor needs dry ground or shallows. Paint land first.'};c.decor=tool;c.plant=null;c.growth=0;c.food=0;}else{c.terrain=tool==='sand'?'sand':'meadow';c.water=0;c.decor=null;c.plant=null;c.growth=0;c.food=0;}return{ok:true};}
+ if(c.decor&&TYPES.includes(tool)&&tool!=='bug')return{ok:false,message:'Choose open ground for that creature.'};
  if(TYPES.includes(tool)){
   if(tool==='snail'&&c.water>.6)return{ok:false,message:'Snails prefer dry land. Try the pond edge.'};
   const a=spawn(w,tool,gx+.5,gy+.5);return a?{ok:true,message:`One ${tool}, zero paperwork.`}:{ok:false,message:`This meadow has enough ${tool}s for now.`};
  }
  if(tool==='water'||tool==='grass'){
-  for(let yy=gy-1;yy<=gy+1;yy++)for(let xx=gx-1;xx<=gx+1;xx++)if(xx>=0&&yy>=0&&xx<WIDTH&&yy<HEIGHT&&(xx-gx)**2+(yy-gy)**2<=1){const t=cellAt(w,xx,yy);if(tool==='water'){t.water=.82;t.moisture=1;t.plant=null;t.growth=0;t.food=0;}else{t.water=0;t.plant='grass';t.growth=.7;t.food=.7;t.moisture=Math.max(t.moisture,.45);}}
+  for(let yy=gy-1;yy<=gy+1;yy++)for(let xx=gx-1;xx<=gx+1;xx++)if(xx>=0&&yy>=0&&xx<WIDTH&&yy<HEIGHT&&(xx-gx)**2+(yy-gy)**2<=(single?0:1)){const t=cellAt(w,xx,yy);t.decor=null;if(tool==='water'){t.water=.82;t.moisture=1;t.plant=null;t.growth=0;t.food=0;}else{t.water=0;t.terrain='meadow';t.plant='grass';t.growth=.7;t.food=.7;t.moisture=Math.max(t.moisture,.45);}}
   return{ok:true};
  }
  if(tool==='flower'||tool==='reed'){
-  if(c.water>.6)return{ok:false,message:'Too deep to plant. Try the shore or lay meadow first.'};c.plant=tool;c.growth=.6;c.food=.7;if(tool==='reed')c.moisture=Math.max(c.moisture,.65);return{ok:true};
+  if(c.decor)return{ok:false,message:'Remove the rock or log before planting.'};if(c.water>.6)return{ok:false,message:'Too deep to plant. Try the shore or lay meadow first.'};c.plant=tool;c.growth=.6;c.food=.7;if(tool==='reed')c.moisture=Math.max(c.moisture,.65);return{ok:true};
  }
  if(tool==='erase'){
-  const near=w.creatures.findIndex(a=>(a.x-x)**2+(a.y-y)**2<.65**2);if(near>=0)w.creatures.splice(near,1);else{c.water=0;c.plant=null;c.growth=0;c.food=0;}return{ok:true};
+  const near=w.creatures.findIndex(a=>(a.x-x)**2+(a.y-y)**2<.65**2);if(near>=0)w.creatures.splice(near,1);else if(c.decor){c.decor=null;}else{c.water=0;c.plant=null;c.growth=0;c.food=0;}return{ok:true};
  }
  return{ok:false,message:'Choose a painting tool.'};
 }
@@ -63,7 +65,7 @@ function ecology(w){
    if(c.growth>.8&&random(w)<.0014){const dx=Math.floor(random(w)*3)-1,dy=Math.floor(random(w)*3)-1;if(x+dx>=0&&y+dy>=0&&x+dx<WIDTH&&y+dy<HEIGHT)spread.push({x:x+dx,y:y+dy,plant:c.plant});}
   }
  }
- for(const p of spread){const c=cellAt(w,p.x,p.y);if(!c.plant&&c.moisture>.2&&c.water<.4){c.plant=p.plant;c.growth=.18;c.food=.2;}}
+ for(const p of spread){const c=cellAt(w,p.x,p.y);if(!c.plant&&!c.decor&&c.terrain!=='sand'&&c.moisture>.2&&c.water<.4){c.plant=p.plant;c.growth=.18;c.food=.2;}}
 }
 export function step(w,dt=.2){
  if(!Number.isFinite(dt)||dt<=0||dt>1)throw Error('Simulation step must be between0 and1 second.');
@@ -80,7 +82,7 @@ export function step(w,dt=.2){
   if(target){const dx=target.x-c.x,dy=target.y-c.y,d=Math.hypot(dx,dy);if(d>.1){c.dx=dx/d;c.dy=dy/d;}if(d<.58){if(c.type==='frog'&&target.type==='bug'){dead.add(target.id);c.energy=clamp(c.energy+.35);w.meals++;}else if(target.cell&&target.cell.food>.08&&target.cell.plant){const bite=Math.min(target.cell.food,dt*.16);target.cell.food-=bite;c.energy=clamp(c.energy+bite*1.7);if(c.type==='snail')target.cell.growth=Math.max(.06,target.cell.growth-bite*.16);}}}
   else if(c.turn<=0){const a=random(w)*Math.PI*2;c.dx=Math.cos(a);c.dy=Math.sin(a);c.turn=2+random(w)*6;}
   const speed=speeds[c.type]*(c.type==='frog'?(Math.sin(w.time*5+c.id)>0?1.5:.1):1),nx=clamp(c.x+c.dx*speed*dt,.05,WIDTH-.05),ny=clamp(c.y+c.dy*speed*dt,.05,HEIGHT-.05);
-  if(c.type==='snail'&&cellAt(w,nx,ny).water>.62){c.dx=-c.dx;c.dy=-c.dy;c.turn=0;}else{c.x=nx;c.y=ny;}
+  if((c.type==='snail'&&cellAt(w,nx,ny).water>.62)||(c.type!=='bug'&&cellAt(w,nx,ny).decor==='rock')){c.dx=-c.dx;c.dy=-c.dy;c.turn=0;}else{c.x=nx;c.y=ny;}
   if(c.x<=.05||c.x>=WIDTH-.05||c.y<=.05||c.y>=HEIGHT-.05){c.dx=-c.dx;c.dy=-c.dy;c.turn=0;}
   if(c.energy<=0||c.age>lifespans[c.type]){dead.add(c.id);w.losses++;const cell=cellAt(w,c.x,c.y);cell.moisture=clamp(cell.moisture+.08);continue;}
   if(c.energy>.9&&c.cooldown===0&&c.age>18){babies.push({type:c.type,x:clamp(c.x+(random(w)-.5),.05,WIDTH-.05),y:clamp(c.y+(random(w)-.5),.05,HEIGHT-.05)});c.energy-=.24;c.cooldown=40+random(w)*30;}
@@ -91,8 +93,9 @@ export function summary(w){let plants=0,flowers=0,pond=0;for(const c of w.cells)
 const finite=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=max;
 export function validateWorld(input){
  const fail=()=>{throw Error('That save is not a valid Pocket Wild world.');};if(!input||input.version!==1||!Number.isInteger(input.seed)||!finite(input.seed,0,4294967295)||!Number.isInteger(input.rng)||!finite(input.rng,0,4294967295)||!finite(input.time,0,1e9)||!finite(input.ecology,0,1)||!['clear','cloud','rain'].includes(input.weather)||!['auto','clear','cloud','rain'].includes(input.weatherMode)||!finite(input.weatherUntil,0,1e9)||!Array.isArray(input.cells)||input.cells.length!==WIDTH*HEIGHT||!Array.isArray(input.creatures)||input.creatures.length>MAX_CREATURES||!Number.isSafeInteger(input.nextId)||!finite(input.nextId,1,1e9))fail();
- const w={version:1,seed:input.seed,rng:input.rng,time:input.time,weather:input.weather,weatherMode:input.weatherMode,weatherUntil:input.weatherUntil,ecology:input.ecology,nextId:input.nextId,cells:[],creatures:[],events:[]};for(const k of ['births','losses','meals']){if(!Number.isSafeInteger(input[k])||!finite(input[k],0,1e9))fail();w[k]=input[k];}
- for(const c of input.cells){if(!c||![null,...PLANTS].includes(c.plant)||!['water','moisture','growth','food'].every(k=>finite(c[k],0,1)))fail();w.cells.push({water:c.water,moisture:c.moisture,plant:c.plant,growth:c.growth,food:c.food});}
+ let origin=null;if(input.origin!=null){const o=input.origin;if(o.generator!==1||o.seed!==input.seed||!Number.isInteger(o.seed)||!finite(o.seed,0,4294967295)||!['meadow','islands','marsh','empty'].includes(o.preset))fail();origin={generator:1,seed:o.seed,preset:o.preset};}
+ const w={origin,version:1,seed:input.seed,rng:input.rng,time:input.time,weather:input.weather,weatherMode:input.weatherMode,weatherUntil:input.weatherUntil,ecology:input.ecology,nextId:input.nextId,cells:[],creatures:[],events:[]};for(const k of ['births','losses','meals']){if(!Number.isSafeInteger(input[k])||!finite(input[k],0,1e9))fail();w[k]=input[k];}
+ for(const c of input.cells){if(!c||!['meadow','sand'].includes(c.terrain??'meadow')||![null,'rock','log'].includes(c.decor??null)||((c.decor??null)!==null&&c.plant!==null)||![null,...PLANTS].includes(c.plant)||!['water','moisture','growth','food'].every(k=>finite(c[k],0,1)))fail();w.cells.push({terrain:c.terrain??'meadow',decor:c.decor??null,water:c.water,moisture:c.moisture,plant:c.plant,growth:c.growth,food:c.food});}
  const ids=new Set();for(const c of input.creatures){if(!c||!TYPES.includes(c.type)||!Number.isSafeInteger(c.id)||c.id<1||c.id>=w.nextId||ids.has(c.id)||!finite(c.x,0,WIDTH)||!finite(c.y,0,HEIGHT)||!finite(c.energy,0,1)||!finite(c.age,0,1e9)||!finite(c.cooldown,0,600)||!finite(c.dx,-1.00001,1.00001)||!finite(c.dy,-1.00001,1.00001)||!finite(c.turn,-1,20))fail();ids.add(c.id);w.creatures.push({id:c.id,type:c.type,x:c.x,y:c.y,energy:c.energy,age:c.age,cooldown:c.cooldown,dx:c.dx,dy:c.dy,turn:c.turn});}
  for(const type of TYPES)if(count(w,type)>caps[type])fail();if(!Array.isArray(input.events)||input.events.length>6)fail();for(const e of input.events){if(!e||typeof e.text!=='string'||e.text.length>180||!finite(e.at,0,1e9))fail();w.events.push({at:e.at,text:e.text});}return w;
 }
